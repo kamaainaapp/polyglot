@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyglot Preview — HTML Viewer & Translator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f11;--surface:#161719;--surface-2:#1e2023;--surface-3:#26282c;--border:#2a2d32;--border-light:#363a40;--text:#e8e9eb;--text-dim:#8b8f96;--text-muted:#5c6068;--accent:#c8f065;--accent-dim:#a8cc4a;--accent-glow:rgba(200,240,101,0.08);--red:#f06565;--orange:#f0a565;--radius:10px;--radius-lg:16px}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);z-index:100}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent) 0%,#65c8f0 100%);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .logo-text{font-family:'Instrument Serif',serif;font-size:22px;letter-spacing:-0.5px}
+  .logo-text em{color:var(--accent);font-style:italic}
+  .btn{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn:hover{background:var(--surface-3);color:var(--text);border-color:var(--border-light)}
+  .btn-accent{background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:600}
+  .btn-accent:hover{background:var(--accent-dim);border-color:var(--accent-dim);color:#0e0f11}
+  .btn-accent:disabled{opacity:.4;cursor:not-allowed}
+  .btn-sm{font-size:11px;padding:6px 10px}
+  .btn svg{width:15px;height:15px}
+  .main{display:grid;grid-template-columns:360px 1fr;overflow:hidden}
+  .sidebar{border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto}
+  .sidebar-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+  .section-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:10px}
+  .input-group{display:flex;gap:6px}
+  .input-group input{flex:1;font-family:'DM Mono',monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none}
+  .input-group input::placeholder{color:var(--text-muted)}
+  .input-group input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+  .drop-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:20px;text-align:center;cursor:pointer;transition:all .25s;background:var(--bg);position:relative}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-glow)}
+  .drop-zone-text{font-size:13px;color:var(--text-dim);line-height:1.5}
+  .drop-zone-text strong{color:var(--accent)}
+  .drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .lang-detect{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--text-dim)}
+  .lang-badge{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;padding:3px 8px;border-radius:6px;background:var(--surface-3);color:var(--accent)}
+  .status-log{display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto}
+  .status-entry{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);padding:3px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+  .status-entry::before{content:'\203A';color:var(--accent);font-weight:bold;flex-shrink:0}
+  .status-entry.error{color:var(--red)}.status-entry.error::before{color:var(--red);content:'\2715'}
+  .status-entry.success{color:var(--accent)}.status-entry.success::before{content:'\2713'}
+  .status-entry.warn{color:var(--orange)}.status-entry.warn::before{color:var(--orange);content:'!'}
+  .preview-panel{display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+  .preview-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);gap:12px}
+  .preview-tabs{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:var(--radius)}
+  .preview-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:7px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;transition:all .2s}
+  .preview-tab.active{background:var(--surface-3);color:var(--text)}
+  .preview-info{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+  .preview-content{flex:1;position:relative;overflow:hidden}
+  .preview-content iframe{width:100%;height:100%;border:none;background:#fff}
+  .preview-content .code-view{width:100%;height:100%;overflow:auto;padding:20px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;display:none}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;gap:16px}
+  .empty-state-icon{width:80px;height:80px;border-radius:20px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.6}
+  .empty-state h2{font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;color:var(--text-dim)}
+  .empty-state p{font-size:13px;color:var(--text-muted);max-width:300px;line-height:1.6}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border)}
+  .toggle-label{font-size:12px;color:var(--text-dim)}
+  .toggle{width:36px;height:20px;border-radius:10px;background:var(--surface-3);border:1px solid var(--border);cursor:pointer;position:relative;transition:all .25s;flex-shrink:0}
+  .toggle.active{background:var(--accent);border-color:var(--accent)}
+  .toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--text);top:2px;left:2px;transition:transform .25s}
+  .toggle.active::after{transform:translateX(16px);background:var(--bg)}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  select{font-family:'DM Mono',monospace;font-size:12px;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235c6068' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+  select:focus{border-color:var(--accent)}
+  .lang-row{display:flex;align-items:center;gap:8px}
+  .lang-row label{font-size:12px;color:var(--text-dim);white-space:nowrap;min-width:35px}
+  .lang-row select{flex:1}
+  textarea{font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;resize:vertical;min-height:80px;max-height:180px;width:100%}
+  textarea::placeholder{color:var(--text-muted)}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+  .progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:0%}
+  .api-badge{display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:6px}
+  .api-badge.ok{background:rgba(200,240,101,0.15);color:var(--accent)}
+  .api-badge.none{background:rgba(240,165,101,0.15);color:var(--orange)}
+  .translate-grid{display:flex;flex-direction:column;gap:8px}
+  .arrow-icon{color:var(--text-muted);text-align:center;font-size:16px;line-height:1}
+  @media(max-width:768px){.main{grid-template-columns:1fr}.sidebar{max-height:40vh}}
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">&#9670;</div>
+      <div class="logo-text">Polyglot <em>Preview</em></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" id="btnClearCache" title="Clear saved translations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-7 5v6m4-6v6M5 6v14h14V6"/></svg>
+        Clear Cache
+      </button>
+      <button class="btn" id="btnClear">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Clear
+      </button>
+    </div>
+  </header>
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="section-label">Load from URL</div>
+        <div class="input-group">
+          <input type="text" id="urlInput" placeholder="https://example.com" spellcheck="false">
+          <button class="btn btn-sm" id="btnLoadUrl">Go</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Paste HTML</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <textarea id="pasteArea" spellcheck="false" placeholder="Paste your HTML code here..."></textarea>
+          <button class="btn btn-accent btn-sm" id="btnLoadPaste" style="align-self:flex-end;">Load HTML</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Upload File</div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".html,.htm,.xhtml">
+          <div style="font-size:24px;margin-bottom:6px;opacity:.7;">&#128196;</div>
+          <div class="drop-zone-text">Drop file or <strong>browse</strong></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">DeepL API Key</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="input-group">
+            <input type="password" id="apiKeyInput" placeholder="Paste key here..." spellcheck="false" style="font-size:11px;">
+            <button class="btn btn-sm" id="btnSaveKey">Save</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span id="apiStatus" class="api-badge none">No key</span>
+            <a href="https://www.deepl.com/pro-api" target="_blank" style="color:var(--accent);text-decoration:none;font-size:10px;">Get free key &rarr;</a>
+          </div>
+          <button class="btn btn-sm" id="btnTestKey" style="align-self:flex-start;display:none;">Test Key</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Translate</div>
+        <div class="translate-grid">
+          <div class="lang-row">
+            <label>From:</label>
+            <select id="sourceLang"></select>
+          </div>
+          <div class="lang-detect" id="detectInfo" style="display:none;">
+            <span>Detected:</span>
+            <span class="lang-badge" id="detectedLang"></span>
+          </div>
+          <div class="arrow-icon">&darr;</div>
+          <div class="lang-row">
+            <label>To:</label>
+            <select id="targetLang"></select>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Auto-translate on load</span>
+            <div class="toggle" id="autoTranslate"></div>
+          </div>
+          <button class="btn btn-accent" id="btnTranslate" disabled>Translate</button>
+          <div class="progress-bar" id="progressBar" style="display:none;"><div class="progress-fill" id="progressFill"></div></div>
+          <button class="btn" id="btnShowOriginal" style="display:none;">Show Original</button>
+          <div id="cacheInfo" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);"></div>
+        </div>
+      </div>
+      <div class="sidebar-section" style="border-bottom:none;">
+        <div class="section-label">Activity Log</div>
+        <div class="status-log" id="statusLog">
+          <div class="status-entry">Ready. Load HTML to begin.</div>
+        </div>
+      </div>
+    </aside>
+    <div class="preview-panel">
+      <div class="preview-toolbar">
+        <div class="preview-tabs">
+          <button class="preview-tab active" data-tab="preview">Preview</button>
+          <button class="preview-tab" data-tab="source">Source</button>
+        </div>
+        <span class="preview-info" id="previewInfo"></span>
+      </div>
+      <div class="preview-content">
+        <iframe id="previewFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+        <div class="code-view" id="codeView"></div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-icon">&#9670;</div>
+          <h2>No preview loaded</h2>
+          <p>Upload an HTML file, enter a URL, or paste HTML to view and translate.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+
+  // ==================== LANGUAGE DATA (alphabetical) ====================
+  var LANGUAGES = [
+    {code:'ar',name:'Arabic'},{code:'bg',name:'Bulgarian'},{code:'bn',name:'Bengali'},
+    {code:'cs',name:'Czech'},{code:'da',name:'Danish'},{code:'de',name:'German'},
+    {code:'el',name:'Greek'},{code:'en',name:'English'},{code:'es',name:'Spanish'},
+    {code:'et',name:'Estonian'},{code:'fa',name:'Persian'},{code:'fi',name:'Finnish'},
+    {code:'fr',name:'French'},{code:'he',name:'Hebrew'},{code:'hi',name:'Hindi'},
+    {code:'hu',name:'Hungarian'},{code:'id',name:'Indonesian'},{code:'it',name:'Italian'},
+    {code:'ja',name:'Japanese'},{code:'ko',name:'Korean'},{code:'lt',name:'Lithuanian'},
+    {code:'lv',name:'Latvian'},{code:'nl',name:'Dutch'},{code:'no',name:'Norwegian'},
+    {code:'pl',name:'Polish'},{code:'pt',name:'Portuguese'},{code:'ro',name:'Romanian'},
+    {code:'ru',name:'Russian'},{code:'sk',name:'Slovak'},{code:'sl',name:'Slovenian'},
+    {code:'sv',name:'Swedish'},{code:'th',name:'Thai'},{code:'tr',name:'Turkish'},
+    {code:'uk',name:'Ukrainian'},{code:'ur',name:'Urdu'},{code:'vi',name:'Vietnamese'},
+    {code:'zh',name:'Chinese'}
+  ];
+
+  var DEEPL_MAP = {
+    'en':'EN','ar':'AR','bg':'BG','cs':'CS','da':'DA','de':'DE','el':'EL',
+    'es':'ES','et':'ET','fi':'FI','fr':'FR','hu':'HU','id':'ID','it':'IT',
+    'ja':'JA','ko':'KO','lt':'LT','lv':'LV','nl':'NL','no':'NB','pl':'PL',
+    'pt':'PT-BR','ro':'RO','ru':'RU','sk':'SK','sl':'SL','sv':'SV','tr':'TR',
+    'uk':'UK','zh':'ZH-HANS'
+  };
+
+  // ==================== STATE ====================
+  var currentHTML = '', originalHTML = '', translatedHTML = '';
+  var isTranslated = false, activeTab = 'preview';
+
+  // ==================== ELEMENTS ====================
+  var el = function(id) { return document.getElementById(id); };
+  var urlInput = el('urlInput'), btnLoadUrl = el('btnLoadUrl');
+  var fileInput = el('fileInput'), dropZone = el('dropZone');
+  var pasteArea = el('pasteArea'), btnLoadPaste = el('btnLoadPaste');
+  var apiKeyInput = el('apiKeyInput'), btnSaveKey = el('btnSaveKey');
+  var apiStatusEl = el('apiStatus'), btnTestKey = el('btnTestKey');
+  var sourceLang = el('sourceLang'), targetLang = el('targetLang');
+  var detectInfo = el('detectInfo'), detectedLangEl = el('detectedLang');
+  var autoToggle = el('autoTranslate');
+  var btnTranslate = el('btnTranslate'), btnShowOriginal = el('btnShowOriginal');
+  var progressBar = el('progressBar'), progressFill = el('progressFill');
+  var cacheInfoEl = el('cacheInfo');
+  var previewFrame = el('previewFrame'), codeView = el('codeView');
+  var emptyState = el('emptyState'), previewInfo = el('previewInfo');
+  var statusLog = el('statusLog');
+  var btnClear = el('btnClear'), btnClearCache = el('btnClearCache');
+  var tabs = document.querySelectorAll('.preview-tab');
+
+  // ==================== POPULATE DROPDOWNS ====================
+  (function() {
+    var srcHTML = '<option value="auto">Auto-detect</option>';
+    var tgtHTML = '';
+    LANGUAGES.forEach(function(l) {
+      srcHTML += '<option value="' + l.code + '">' + l.name + '</option>';
+      tgtHTML += '<option value="' + l.code + '">' + l.name + '</option>';
+    });
+    sourceLang.innerHTML = srcHTML;
+    targetLang.innerHTML = tgtHTML;
+    targetLang.value = 'en';
+  })();
+
+  // ==================== LOGGING ====================
+  function log(msg, type) {
+    var e = document.createElement('div');
+    e.className = 'status-entry ' + (type || '');
+    e.textContent = msg;
+    statusLog.prepend(e);
+    while (statusLog.children.length > 60) statusLog.removeChild(statusLog.lastChild);
+  }
+
+  // ==================== LANGUAGE DETECTION ====================
+  function hasWords(text, words) {
+    var count = 0;
+    for (var i = 0; i < words.length; i++) {
+      if (text.indexOf(words[i]) !== -1) count++;
+    }
+    return count;
+  }
+
+  function detectLanguage(text) {
+    var t = text.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/&[^;]+;/g, ' ')
+                .replace(/\s+/g, ' ').trim();
+
+    // Non-Latin scripts
+    if (/[\uac00-\ud7af]{3,}/.test(t)) return {name:'Korean',code:'ko'};
+    if (/[\u3040-\u309f\u30a0-\u30ff]{3,}/.test(t)) return {name:'Japanese',code:'ja'};
+    if (/[\u4e00-\u9fff]{5,}/.test(t)) return {name:'Chinese',code:'zh'};
+    if (/[\u0900-\u097f]{3,}/.test(t)) return {name:'Hindi',code:'hi'};
+    if (/[\u0980-\u09ff]{3,}/.test(t)) return {name:'Bengali',code:'bn'};
+    if (/[\u0e00-\u0e7f]{3,}/.test(t)) return {name:'Thai',code:'th'};
+    if (/[\u0370-\u03ff\u1f00-\u1fff]{3,}/.test(t)) return {name:'Greek',code:'el'};
+    if (/[\u0590-\u05ff]{3,}/.test(t)) return {name:'Hebrew',code:'he'};
+    if (/[\u0600-\u06ff]{3,}/.test(t)) {
+      if ((t.match(/[\u0679\u0688\u0691\u06BA\u06D2\u06C1\u06BE]/g) || []).length >= 2) return {name:'Urdu',code:'ur'};
+      return {name:'Arabic',code:'ar'};
+    }
+    if (/[\u0400-\u04ff]{3,}/.test(t)) {
+      if (/[\u0456\u0457\u0454\u0491]/.test(t)) return {name:'Ukrainian',code:'uk'};
+      return {name:'Russian',code:'ru'};
+    }
+
+    // Latin: check lang attribute as strong signal
+    var langAttr = text.match(/<html[^>]*\slang=["']([^"']+)["']/i);
+    if (langAttr) {
+      var code = langAttr[1].split('-')[0].toLowerCase();
+      var match = LANGUAGES.find(function(l) { return l.code === code; });
+      if (match) return {name: match.name, code: match.code};
+    }
+
+    // Word-based detection (with trailing space for word boundary)
+    var s = ' ' + t.toLowerCase() + ' ';
+    if (hasWords(s, [' ja ',' on ',' ei ',' se ',' kun ',' tai ',' niin ',' ovat ',' oli ',' olla ',' mutta ',' kuin ',' kanssa ',' joka ',' myös ',' voi ',' nyt ',' hän ',' tämä ',' että ',' kaikki ',' vain ']) >= 4) return {name:'Finnish',code:'fi'};
+    if (hasWords(s, [' não ',' são ',' também ',' você ',' ainda ',' muito ',' até ',' então ',' pelo ',' pela ',' isso ',' fazer ',' porque ',' todos ',' pode ',' uma ',' dos ',' das ']) >= 3) return {name:'Portuguese',code:'pt'};
+    if (hasWords(s, [' los ',' las ',' del ',' por ',' con ',' pero ',' más ',' están ',' tiene ',' también ',' puede ',' cuando ',' hay ',' entre ',' sin ',' muy ']) >= 4) return {name:'Spanish',code:'es'};
+    if (hasWords(s, [' les ',' des ',' une ',' est ',' pour ',' dans ',' avec ',' sur ',' pas ',' sont ',' cette ',' qui ',' nous ',' vous ',' très ',' mais ',' tout ']) >= 4) return {name:'French',code:'fr'};
+    if (hasWords(s, [' der ',' die ',' das ',' ein ',' eine ',' und ',' ist ',' von ',' den ',' mit ',' auf ',' für ',' sich ',' nicht ',' auch ',' oder ',' nach ']) >= 4) return {name:'German',code:'de'};
+    if (hasWords(s, [' gli ',' della ',' delle ',' sono ',' anche ',' questo ',' questa ',' essere ',' hanno ',' molto ',' alla ',' nella ',' stato ']) >= 3) return {name:'Italian',code:'it'};
+    if (hasWords(s, [' het ',' een ',' van ',' dat ',' zijn ',' niet ',' met ',' voor ',' maar ',' ook ',' nog ',' kan ',' werd ',' meer ']) >= 4) return {name:'Dutch',code:'nl'};
+    if (hasWords(s, [' bir ',' bu ',' ve ',' için ',' olan ',' olarak ',' gibi ',' daha ',' ancak ',' ama ',' var ',' yok ']) >= 4) return {name:'Turkish',code:'tr'};
+    if (hasWords(s, [' jest ',' nie ',' się ',' jak ',' ale ',' czy ',' jego ',' tego ',' przez ',' który ',' tylko ',' bardzo ']) >= 4) return {name:'Polish',code:'pl'};
+    if (hasWords(s, [' och ',' att ',' det ',' som ',' för ',' med ',' den ',' var ',' inte ',' har ',' kan ',' man ',' från ']) >= 4) return {name:'Swedish',code:'sv'};
+    if (hasWords(s, [' og ',' det ',' som ',' for ',' med ',' den ',' var ',' ikke ',' har ',' kan ',' fra ']) >= 4) return {name:'Norwegian',code:'no'};
+    if (hasWords(s, [' egy ',' hogy ',' nem ',' van ',' volt ',' csak ',' még ',' már ',' mint ',' meg ',' vagy ']) >= 4) return {name:'Hungarian',code:'hu'};
+    if (hasWords(s, [' je ',' že ',' na ',' se ',' jako ',' ale ',' tak ',' byl ',' jsou ',' aby ']) >= 4) return {name:'Czech',code:'cs'};
+    if (hasWords(s, [' este ',' sunt ',' care ',' din ',' sau ',' dar ',' pentru ',' fost ',' mai ']) >= 4) return {name:'Romanian',code:'ro'};
+    if (hasWords(s, [' của ',' và ',' là ',' có ',' trong ',' không ',' được ',' một ',' này ',' cho ']) >= 4) return {name:'Vietnamese',code:'vi'};
+    if (hasWords(s, [' yang ',' dan ',' di ',' ini ',' itu ',' dengan ',' untuk ',' dari ',' pada ',' tidak ']) >= 4) return {name:'Indonesian',code:'id'};
+
+    return {name:'English',code:'en'};
+  }
+
+  // ==================== GET EFFECTIVE SOURCE LANGUAGE ====================
+  function getEffectiveSource() {
+    if (sourceLang.value !== 'auto') return sourceLang.value;
+    if (!currentHTML) return 'en';
+    return detectLanguage(currentHTML).code;
+  }
+
+  // ==================== UI HELPERS ====================
+  function setProgress(p) {
+    progressBar.style.display = (p >= 0 && p <= 100) ? 'block' : 'none';
+    progressFill.style.width = Math.min(p, 100) + '%';
+  }
+
+  function showPreview(html) {
+    emptyState.style.display = 'none';
+    previewFrame.style.display = activeTab === 'preview' ? 'block' : 'none';
+    codeView.style.display = activeTab === 'source' ? 'block' : 'none';
+    previewFrame.srcdoc = html;
+    codeView.textContent = html;
+  }
+
+  function setLoaded(html, source) {
+    currentHTML = html; originalHTML = html; translatedHTML = ''; isTranslated = false;
+    showPreview(html);
+    var lang = detectLanguage(html);
+    detectedLangEl.textContent = lang.name + ' (' + lang.code + ')';
+    detectInfo.style.display = sourceLang.value === 'auto' ? 'flex' : 'none';
+    btnTranslate.disabled = false;
+    btnShowOriginal.style.display = 'none';
+    var size = new Blob([html]).size;
+    previewInfo.textContent = source + ' \u00B7 ' + (size > 1024 ? (size / 1024).toFixed(1) + ' KB' : size + ' B');
+    log('Loaded: ' + source, 'success');
+    log('Detected: ' + lang.name + ' (' + lang.code + ')');
+    if (autoToggle.classList.contains('active') && getEffectiveSource() !== targetLang.value) {
+      translateContent();
+    }
+  }
+
+  // ==================== STRING EXTRACTION ====================
+  var SKIP = new Set([
+    'true','false','null','undefined','function','return','var','let','const',
+    'if','else','for','while','do','switch','case','break','continue','new',
+    'this','typeof','instanceof','void','delete','throw','try','catch','finally',
+    'class','extends','super','import','export','default','from','async','await',
+    'hidden','flex','block','none','inline','grid','relative','absolute','fixed',
+    'visible','auto','inherit','initial','normal','bold','italic','center',
+    'left','right','top','bottom','solid','transparent','pointer','smooth',
+    'click','keydown','keypress','change','input','submit','load','scroll',
+    'focus','blur','DOMContentLoaded','innerHTML','textContent','className',
+    'Enter','Escape','Tab','div','span','button','select','form',
+    'table','img','svg','path','text','password','email','number',
+    'GET','POST','PUT','DELETE',
+    'Inter','Playfair Display','Roboto','Arial','Helvetica','sans-serif','serif','monospace'
+  ]);
+
+  function isHumanText(s, fromJS) {
+    var t = s.trim();
+    if (t.length < 2) return false;
+    if (SKIP.has(t)) return false;
+    if (!/[a-zA-Z\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF\u0900-\u097F\u0980-\u09FF\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0590-\u05FF\u0370-\u03FF\u0e00-\u0e7f]/.test(t)) return false;
+    if (/^https?:\/\//.test(t)) return false;
+    if (/^[\w.+-]+@[\w.-]+\.\w+$/.test(t)) return false;
+    if (/^#[0-9a-fA-F]{3,8}$/.test(t)) return false;
+    if (/^rgba?\(/.test(t)) return false;
+    if (/^[\/\\][\w\/\\.-]+$/.test(t)) return false;
+    if (/^(.)\1{2,}$/.test(t)) return false;
+    var letters = t.replace(/[\s\d.,;:!?%$#+\-*/=@()\[\]{}|\\<>"'`~^&_]/g, '');
+    if (letters.length < 2 && t.length > 3) return false;
+    if (fromJS) {
+      if (/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/.test(t)) return false;
+      if (/^[a-zA-Z_$][\w$]*(\.[a-zA-Z_$][\w$]*)+$/.test(t)) return false;
+      if (/^[a-zA-Z_$][\w$]*\(/.test(t) && t.indexOf(' ') === -1) return false;
+      if (/^[a-z][a-z0-9]*$/.test(t) && t.length < 25) return false;
+      if (/^[A-Z][A-Z0-9_]+$/.test(t)) return false;
+      if (/^[.#]/.test(t) && t.indexOf(' ') === -1) return false;
+      if (/picsum|unsplash|cloudflare|googleapis|cdnjs|wikimedia|fontawesome/.test(t)) return false;
+      if (/^[a-z][\w-]*(\s+[a-z][\w-]*){2,}$/.test(t) && !/[A-Z\u00C0-\u024F]/.test(t)) return false;
+    }
+    return true;
+  }
+
+  function extractAllStrings(html) {
+    var strings = {};
+    var htmlOnly = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
+    htmlOnly.split(/<[^>]+>/).forEach(function(seg) {
+      seg.split('\n').forEach(function(line) {
+        var t = line.trim();
+        if (t && isHumanText(t, false)) strings[t] = true;
+      });
+    });
+    var m, attrRe = /(?:placeholder|title|alt|aria-label|content)\s*=\s*"([^"]+)"/gi;
+    while ((m = attrRe.exec(html)) !== null) { if (isHumanText(m[1], false)) strings[m[1]] = true; }
+    var attrRe2 = /(?:placeholder|title|alt|aria-label|content)\s*=\s*'([^']+)'/gi;
+    while ((m = attrRe2.exec(html)) !== null) { if (isHumanText(m[1], false)) strings[m[1]] = true; }
+    var scriptRe = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    while ((m = scriptRe.exec(html)) !== null) { extractJSStrings(m[1], strings); }
+    return Object.keys(strings);
+  }
+
+  function extractJSStrings(code, strings) {
+    var m;
+    var dq = /"((?:[^"\\]|\\.)*)"/g;
+    while ((m = dq.exec(code)) !== null) {
+      var s = m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\').trim();
+      if (isHumanText(s, true)) strings[s] = true;
+    }
+    var sq = /'((?:[^'\\]|\\.)*)'/g;
+    while ((m = sq.exec(code)) !== null) {
+      var s2 = m[1].replace(/\\'/g, "'").replace(/\\n/g, '\n').replace(/\\\\/g, '\\').trim();
+      if (isHumanText(s2, true)) strings[s2] = true;
+    }
+    var tl = /`((?:[^`\\]|\\.)*)`/g;
+    while ((m = tl.exec(code)) !== null) {
+      m[1].split(/\$\{[^}]*\}|<[^>]*>/g).forEach(function(p) {
+        var pt = p.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
+        if (isHumanText(pt, true)) strings[pt] = true;
+      });
+    }
+  }
+
+  // ==================== CACHE ====================
+  function ck(s, t) { return 'pg_' + s + '_' + t; }
+  function loadCache(s, t) { try { var d = localStorage.getItem(ck(s, t)); return d ? JSON.parse(d) : {}; } catch(e) { return {}; } }
+  function saveCache(s, t, map) {
+    try { var ex = loadCache(s, t); for (var k in map) ex[k] = map[k]; localStorage.setItem(ck(s, t), JSON.stringify(ex)); } catch(e) {}
+  }
+  function clearAllCache() {
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('pg_') === 0 && k !== 'pg_deepl_key') keys.push(k); }
+    keys.forEach(function(k) { localStorage.removeItem(k); });
+    log('Cache cleared (' + keys.length + ' entries)', 'success');
+    updateCacheInfo();
+  }
+  function updateCacheInfo() {
+    var count = 0, pairs = 0;
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('pg_') === 0 && k !== 'pg_deepl_key') {
+        pairs++; try { count += Object.keys(JSON.parse(localStorage.getItem(k))).length; } catch(e) {}
+      }
+    }
+    cacheInfoEl.textContent = count > 0 ? count + ' cached (' + pairs + ' pairs)' : '';
+  }
+
+  // ==================== API KEY ====================
+  function getApiKey() { return localStorage.getItem('pg_deepl_key') || ''; }
+  function setApiKey(key) {
+    if (key) localStorage.setItem('pg_deepl_key', key); else localStorage.removeItem('pg_deepl_key');
+    updateApiStatus();
+  }
+  function updateApiStatus() {
+    var key = getApiKey();
+    if (key) {
+      apiStatusEl.className = 'api-badge ok'; apiStatusEl.textContent = '\u2713 DeepL key saved';
+      apiKeyInput.value = ''; apiKeyInput.placeholder = 'Saved \u2014 paste new to replace';
+      btnTestKey.style.display = 'flex';
+    } else {
+      apiStatusEl.className = 'api-badge none'; apiStatusEl.textContent = 'No key \u2014 uses MyMemory';
+      apiKeyInput.placeholder = 'Paste key here...'; btnTestKey.style.display = 'none';
+    }
+  }
+  btnSaveKey.addEventListener('click', function() {
+    var key = apiKeyInput.value.trim();
+    if (key) { setApiKey(key); log('DeepL API key saved', 'success'); }
+    else if (getApiKey()) { setApiKey(''); log('API key removed'); }
+  });
+  apiKeyInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') btnSaveKey.click(); });
+
+  btnTestKey.addEventListener('click', function() {
+    var key = getApiKey(); if (!key) return;
+    log('Testing DeepL key...');
+    btnTestKey.disabled = true;
+    deepLFetch('/v2/usage', {method: 'GET'}, key).then(function(data) {
+      btnTestKey.disabled = false;
+      if (data && data.character_count !== undefined) {
+        log('Key valid! ' + data.character_count + '/' + data.character_limit + ' chars used', 'success');
+      } else {
+        log('Could not verify key. Check if it is correct.', 'error');
+      }
+    });
+  });
+
+  updateApiStatus();
+  updateCacheInfo();
+
+  // ==================== DEEPL FETCH (with CORS proxy fallback) ====================
+  function deepLFetch(path, opts, key) {
+    var directUrl = 'https://api-free.deepl.com' + path;
+    var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(directUrl);
+    var headers = Object.assign({'Authorization': 'DeepL-Auth-Key ' + key}, opts.headers || {});
+
+    // Try direct first
+    return fetch(directUrl, Object.assign({}, opts, {headers: headers, signal: AbortSignal.timeout(20000)}))
+      .then(function(r) { if (r.ok) return r.json(); throw new Error('status-' + r.status); })
+      .catch(function(err) {
+        // If CORS or network error, try proxy
+        if (err.message === 'status-403') { log('DeepL: invalid API key', 'error'); return null; }
+        if (err.message === 'status-456') { log('DeepL: quota exceeded', 'error'); return null; }
+        return fetch(proxyUrl, Object.assign({}, opts, {headers: headers, signal: AbortSignal.timeout(25000)}))
+          .then(function(r) {
+            if (r.ok) return r.json();
+            if (r.status === 403) log('DeepL: invalid key', 'error');
+            if (r.status === 456) log('DeepL: quota exceeded', 'error');
+            return null;
+          })
+          .catch(function(e) { log('DeepL unreachable: ' + e.message, 'error'); return null; });
+      });
+  }
+
+  // ==================== TRANSLATION APIS ====================
+  function translateBatchDeepL(texts, srcCode, tgtCode) {
+    var key = getApiKey();
+    var body = {text: texts, target_lang: DEEPL_MAP[tgtCode] || tgtCode.toUpperCase()};
+    if (srcCode !== 'auto') body.source_lang = DEEPL_MAP[srcCode] || srcCode.toUpperCase();
+    return deepLFetch('/v2/translate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    }, key).then(function(data) {
+      if (!data || !data.translations) return null;
+      return data.translations.map(function(t) { return t.text; });
+    });
+  }
+
+  function translateOneMyMemory(text, srcCode, tgtCode) {
+    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text.substring(0, 490)) + '&langpair=' + encodeURIComponent(srcCode + '|' + tgtCode);
+    return fetch(url, {signal: AbortSignal.timeout(15000)})
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.responseStatus === 200 && data.responseData) {
+          var r = data.responseData.translatedText;
+          if (!r || /QUERY LENGTH LIMIT|MYMEMORY WARNING|NO QUERY SPECIFIED/i.test(r)) return null;
+          if ((r.match(/\./g) || []).length > r.length * 0.4) return null;
+          if (r.length > text.length * 5 && r.length > 50) return null;
+          return r;
+        }
+        return null;
+      })
+      .catch(function() { return null; });
+  }
+
+  function runPool(tasks, concurrency, onProgress) {
+    var idx = 0, done = 0;
+    function worker() {
+      if (idx >= tasks.length) return Promise.resolve();
+      var i = idx++;
+      return tasks[i]().then(function() { done++; if (onProgress) onProgress(done, tasks.length); return worker(); });
+    }
+    var w = [];
+    for (var j = 0; j < Math.min(concurrency, tasks.length); j++) w.push(worker());
+    return Promise.all(w);
+  }
+
+  // ==================== MAIN TRANSLATE ====================
+  function translateContent() {
+    if (!currentHTML) return;
+    var srcCode = getEffectiveSource();
+    var tgtCode = targetLang.value;
+
+    if (srcCode === tgtCode) {
+      log('Source (' + srcCode + ') = target (' + tgtCode + '). Change one.', 'error');
+      btnTranslate.disabled = false; btnTranslate.textContent = 'Translate';
+      return;
+    }
+
+    btnTranslate.disabled = true;
+    btnTranslate.innerHTML = '<span class="spinner"></span> Extracting...';
+    setProgress(0);
+
+    setTimeout(function() {
+      log('Translating: ' + srcCode + ' \u2192 ' + tgtCode);
+      var allStrings = extractAllStrings(currentHTML);
+      log(allStrings.length + ' unique strings found');
+
+      var cache = loadCache(srcCode, tgtCode);
+      var cached = 0, toTranslate = [], translationMap = {};
+      allStrings.forEach(function(s) {
+        if (cache[s]) { translationMap[s] = cache[s]; cached++; }
+        else toTranslate.push(s);
+      });
+      if (cached > 0) log(cached + ' from cache', 'success');
+
+      if (toTranslate.length === 0) {
+        if (cached > 0) applyTranslations(translationMap, srcCode, tgtCode);
+        else { log('Nothing to translate', 'warn'); resetBtn(); }
+        return;
+      }
+
+      log(toTranslate.length + ' need API calls');
+
+      if (getApiKey()) {
+        log('Using DeepL API...', 'success');
+        btnTranslate.innerHTML = '<span class="spinner"></span> DeepL...';
+        var BATCH = 50, batches = [];
+        for (var i = 0; i < toTranslate.length; i += BATCH) batches.push(toTranslate.slice(i, i + BATCH));
+        log(batches.length + ' batch(es)');
+
+        var bi = 0, failed = false;
+        (function next() {
+          if (bi >= batches.length || failed) {
+            if (failed) {
+              var remaining = toTranslate.filter(function(s) { return !translationMap[s]; });
+              if (remaining.length > 0) {
+                log('Falling back to MyMemory for ' + remaining.length + ' strings', 'warn');
+                myMemoryTranslate(remaining, translationMap, srcCode, tgtCode);
+                return;
+              }
+            }
+            finish(translationMap, srcCode, tgtCode, cache);
+            return;
+          }
+          var batch = batches[bi];
+          translateBatchDeepL(batch, srcCode, tgtCode).then(function(results) {
+            if (results && results.length === batch.length) {
+              for (var j = 0; j < batch.length; j++) {
+                if (results[j] && results[j] !== batch[j]) translationMap[batch[j]] = results[j];
+              }
+              log('Batch ' + (bi + 1) + '/' + batches.length + ' \u2713', 'success');
+            } else {
+              log('Batch ' + (bi + 1) + ' failed', 'error');
+              failed = true;
+            }
+            bi++;
+            setProgress(Math.round(bi / batches.length * 100));
+            next();
+          });
+        })();
+      } else {
+        log('Using MyMemory (no DeepL key)');
+        myMemoryTranslate(toTranslate, translationMap, srcCode, tgtCode);
+      }
+    }, 50);
+  }
+
+  function myMemoryTranslate(toTranslate, translationMap, srcCode, tgtCode) {
+    btnTranslate.innerHTML = '<span class="spinner"></span> MyMemory...';
+    var tasks = toTranslate.map(function(text) {
+      return function() {
+        return translateOneMyMemory(text, srcCode, tgtCode).then(function(r) {
+          if (r && r !== text) translationMap[text] = r;
+        });
+      };
+    });
+    var lastPct = -1;
+    runPool(tasks, 4, function(done, total) {
+      var pct = Math.round(done / total * 100);
+      setProgress(pct);
+      if (Math.floor(pct / 20) * 20 > lastPct) { lastPct = Math.floor(pct / 20) * 20; log(done + '/' + total); }
+    }).then(function() {
+      finish(translationMap, srcCode, tgtCode, loadCache(srcCode, tgtCode));
+    });
+  }
+
+  function finish(map, srcCode, tgtCode, cache) {
+    var newEntries = {};
+    for (var k in map) if (!cache[k]) newEntries[k] = map[k];
+    if (Object.keys(newEntries).length > 0) saveCache(srcCode, tgtCode, newEntries);
+    updateCacheInfo();
+    applyTranslations(map, srcCode, tgtCode);
+  }
+
+  function applyTranslations(map, srcCode, tgtCode) {
+    var keys = Object.keys(map).sort(function(a, b) { return b.length - a.length; });
+    var result = currentHTML, applied = 0;
+    keys.forEach(function(orig) {
+      var trans = map[orig];
+      if (!trans || trans === orig) return;
+      var before = result.length;
+      result = result.split(orig).join(trans);
+      if (result.length !== before) applied++;
+    });
+    translatedHTML = result; isTranslated = true;
+    showPreview(translatedHTML);
+    btnShowOriginal.style.display = 'flex'; btnShowOriginal.textContent = 'Show Original';
+    setProgress(100); setTimeout(function() { setProgress(-1); }, 600);
+    log(applied + '/' + keys.length + ' translations applied', 'success');
+    resetBtn();
+  }
+
+  function resetBtn() { btnTranslate.disabled = false; btnTranslate.textContent = 'Translate'; }
+
+  // ==================== EVENTS ====================
+  btnTranslate.addEventListener('click', translateContent);
+
+  btnShowOriginal.addEventListener('click', function() {
+    if (isTranslated) { isTranslated = false; showPreview(originalHTML); btnShowOriginal.textContent = 'Show Translated'; }
+    else { isTranslated = true; showPreview(translatedHTML); btnShowOriginal.textContent = 'Show Original'; }
+  });
+
+  sourceLang.addEventListener('change', function() {
+    if (sourceLang.value === 'auto') {
+      detectInfo.style.display = currentHTML ? 'flex' : 'none';
+      log('Source: auto-detect');
+    } else {
+      detectInfo.style.display = 'none';
+      log('Source: ' + sourceLang.options[sourceLang.selectedIndex].text);
+    }
+  });
+
+  btnLoadUrl.addEventListener('click', loadUrl);
+  urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') loadUrl(); });
+  function loadUrl() {
+    var url = urlInput.value.trim(); if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    log('Loading: ' + url);
+    emptyState.style.display = 'none';
+    previewFrame.style.display = activeTab === 'preview' ? 'block' : 'none';
+    previewFrame.src = url; previewFrame.srcdoc = '';
+    previewInfo.textContent = url; btnTranslate.disabled = true;
+    var proxies = ['https://api.allorigins.win/raw?url=' + encodeURIComponent(url), 'https://corsproxy.io/?' + encodeURIComponent(url)];
+    (function attempt(i) {
+      if (i >= proxies.length) { log('Could not fetch source. Try paste/upload.', 'error'); return; }
+      fetch(proxies[i], {signal: AbortSignal.timeout(10000)})
+        .then(function(r) { if (r.ok) return r.text(); throw new Error('fail'); })
+        .then(function(html) { setLoaded(html, url); })
+        .catch(function() { attempt(i + 1); });
+    })(0);
+  }
+
+  btnLoadPaste.addEventListener('click', function() {
+    var html = pasteArea.value.trim();
+    if (!html) { log('Nothing to load', 'error'); return; }
+    setLoaded(html, 'Pasted HTML');
+  });
+
+  fileInput.addEventListener('change', function(e) { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+  function loadFile(file) {
+    if (!file.name.match(/\.(html?|xhtml)$/i)) { log('Upload an HTML file', 'error'); return; }
+    var r = new FileReader();
+    r.onload = function(e) { setLoaded(e.target.result, file.name); };
+    r.readAsText(file);
+  }
+
+  btnClear.addEventListener('click', function() {
+    currentHTML = ''; originalHTML = ''; translatedHTML = ''; isTranslated = false;
+    previewFrame.srcdoc = ''; previewFrame.removeAttribute('src');
+    previewFrame.style.display = 'none'; codeView.style.display = 'none';
+    emptyState.style.display = 'flex'; previewInfo.textContent = '';
+    detectInfo.style.display = 'none'; btnTranslate.disabled = true;
+    btnShowOriginal.style.display = 'none'; urlInput.value = ''; pasteArea.value = '';
+    sourceLang.value = 'auto'; setProgress(-1); log('Cleared');
+  });
+  btnClearCache.addEventListener('click', clearAllCache);
+
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active'); activeTab = tab.dataset.tab;
+      if (currentHTML || previewFrame.src) {
+        previewFrame.style.display = activeTab === 'preview' ? 'block' : 'none';
+        codeView.style.display = activeTab === 'source' ? 'block' : 'none';
+      }
+    });
+  });
+
+  autoToggle.addEventListener('click', function() {
+    autoToggle.classList.toggle('active');
+    log('Auto-translate: ' + (autoToggle.classList.contains('active') ? 'ON' : 'OFF'));
+  });
+
+  previewFrame.style.display = 'none'; codeView.style.display = 'none';
+})();
+</script>
+</body>
+</html>
